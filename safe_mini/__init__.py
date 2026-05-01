@@ -1,16 +1,37 @@
-"""safe-mini: a safe-by-construction local-execution substrate for mini-swe-agent-style coding agents.
-
-Public API (post-port; currently stubs):
-- Chunk, Budget, RunResult, FailureClass, ObservationPolicy, ExecutorPolicy (canonical types)
-- AgentRunner (Protocol contract)
-- SafeMiniRunner (concrete implementation)
-- ExecutorPolicies, ObservationPolicies (policy registries)
-- classify_failure (failure classifier helper)
-"""
+"""safe-mini: a safe local-execution substrate for mini-swe-agent-style agents."""
 
 __version__ = "0.1.0"
 
-# Stubs — replaced once the careful port from reference/ lab_safe_mini_agent.py lands.
+from .action_parser import ActionFormat, ActionParseError, ParsedAction, parse_action
+from .classifier import classify_failure
+from .policies import ExecutorPolicies
+from .protocol import AgentRunner
+from .runner import SafeMiniRunner
+from .types import (
+    Budget,
+    Chunk,
+    ExecutorPolicy,
+    FailureClass,
+    Observation,
+    ObservationPolicy,
+    RunResult,
+)
+
 __all__ = [
+    "ActionFormat",
+    "ActionParseError",
+    "AgentRunner",
+    "Budget",
+    "Chunk",
+    "ExecutorPolicies",
+    "ExecutorPolicy",
+    "FailureClass",
+    "Observation",
+    "ObservationPolicy",
+    "ParsedAction",
+    "RunResult",
+    "SafeMiniRunner",
     "__version__",
+    "classify_failure",
+    "parse_action",
 ]
