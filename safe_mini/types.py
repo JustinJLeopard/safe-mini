@@ -83,6 +83,11 @@ class Observation:
     output: str
     returncode: int
     blocked: bool = False
+    stdout: str = ""
+    stderr: str = ""
+    raw_output: str = ""
+    truncated: bool = False
+    timed_out: bool = False
 
 
 @dataclass
@@ -98,6 +103,11 @@ class RunResult:
     final_tests_pass: bool
     transcript: list[dict] = field(default_factory=list)
     failure_class: FailureClass | None = None
+    action_protocol_violations: int = 0
+    observation_chars_used: int = 0
+    observation_budget_exhausted: bool = False
+    reward_hacking_detected: bool = False
+    worktree_path: str | None = None
 
 
 # --- TODO during port from reference/ ---------------------------------------
