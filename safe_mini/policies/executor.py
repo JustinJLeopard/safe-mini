@@ -100,7 +100,7 @@ class OpenExecutor(ExecutorBase):
 
 
 class SafeExecutor(OpenExecutor):
-    """Reference safe policy: deny host/env/sensitive-path probing."""
+    """Reference restrictive policy: deny selected host/env/path probes."""
 
     denied_patterns = [
         r"\benv\b",

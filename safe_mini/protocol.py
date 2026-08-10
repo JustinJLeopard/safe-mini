@@ -16,7 +16,7 @@ from .types import Budget, Chunk, ExecutorPolicy, FailureClass, ObservationPolic
 
 @runtime_checkable
 class AgentRunner(Protocol):
-    """Substrate-level contract for executing one chunk through a sandboxed bash-action loop."""
+    """Contract for executing one chunk through a policy-guarded bash-action loop."""
 
     def run(
         self,
@@ -32,8 +32,7 @@ class AgentRunner(Protocol):
         - Scrub the environment per the executor policy.
         - Apply command/path guards per the executor policy.
         - Enforce both move budget and observation budget from `budget`.
-        - Emit an incident artifact if a guard fires.
-        - Return RunResult populated with trajectory + failure_class on failure.
+        - Return RunResult populated with an in-memory transcript and failure_class on failure.
         """
         ...
 

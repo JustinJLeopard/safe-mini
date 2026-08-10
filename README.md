@@ -6,9 +6,11 @@
 [![Status: alpha](https://img.shields.io/badge/status-alpha-orange.svg)](#status)
 [![Python 3.11+](https://img.shields.io/badge/python-3.11+-blue.svg)](https://www.python.org/downloads/)
 
-**A safe-by-construction local-execution substrate for mini-swe-agent–style bash-action coding agents.**
+**A bounded local-execution substrate with policy guards for mini-swe-agent–style bash-action coding agents.**
 
-Sandboxed boundary, generous capability inside. Designed to be auditable in one focused sitting.
+Fresh worktree copies, scoped `HOME`, a sanitized environment, and explicit
+command policies. The built-in executors run commands in the host process
+context; isolation requires an injected executor boundary.
 
 </div>
 
@@ -18,12 +20,12 @@ Sandboxed boundary, generous capability inside. Designed to be auditable in one 
 
 safe-mini is the load-bearing runtime substrate for [mini-swe-agent](https://github.com/SWE-agent/mini-swe-agent)–style coding agents that decide one bash command at a time within a budget.
 
-Multiple peer consumers depend on it:
+Current and planned consumers:
 
 | Consumer | Role |
 |---|---|
-| [JustAi](https://github.com/JustinJLeopard/justai-demo) | Project orchestrator — goal decomposition, chunk sizing, dashboards. |
-| local-resident | Researcher harness — benchmark corpus + 54-trial calibration matrix. |
+| [JustAi](https://github.com/JustinJLeopard/JustAi) | Explicit, opt-in source adapter over the public runner contract. |
+| local-resident | Planned research harness — benchmark corpus + calibration matrix. |
 
 safe-mini is intentionally generic: it does not know about its consumers' domain models. Future projects can ship on top of the same substrate.
 
@@ -34,11 +36,9 @@ safe-mini is intentionally generic: it does not know about its consumers' domain
 - **Executor policies** — `open` / `safe` / `allowlist` (and future variants)
 - **Observation policies** — `full` / `tail` / `headtail` / `structured` / `structured+raw-tail`
 - **Worktree provisioner** — fresh copy of repo per run, scoped HOME, sanitized PATH
-- **Command/path guard** — configurable denylist + sensitive-path patterns
-- **Incident artifact emission** — full transcript saved per run
+- **Command/path guard** — built-in regex policy checks before host-process execution
 - **Failure classifier** — 7-class taxonomy
-- **Trajectory recording** — per-step timeline with phase markers
-- **Ledger** — per-run cost/token/latency capture
+- **Run transcript** — in-memory per-step records carried in `RunResult`
 - **Canonical types** — `Chunk`, `Budget`, `RunResult`, `FailureClass`, `ObservationPolicy`, `ExecutorPolicy`
 - **AgentRunner Protocol** — the contract consumers depend on
 
@@ -106,6 +106,9 @@ This records source integration only. It is not package-install, live-model,
 productive-runtime, or release evidence.
 
 **Empirical baseline** (from the lab study, 6 task families × 9 configs × 54 trials):
+
+These are deterministic reference-study results, not proof of host isolation,
+release readiness, or broad real-model performance.
 
 - "Open" executor leaked a fake credential **6 / 6** probe runs while still solving the task.
 - "Safe" executor blocked **6 / 6** probes and still solved **6 / 6** tasks.

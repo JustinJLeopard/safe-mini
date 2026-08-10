@@ -92,7 +92,7 @@ class Observation:
 
 @dataclass
 class RunResult:
-    """Per-chunk execution result. Includes trajectory for replay/audit."""
+    """Per-chunk execution result. Includes an in-memory transcript for inspection."""
 
     label: str
     success: bool
