@@ -70,7 +70,7 @@ Both are enforced inside the runner. Either axis can independently fire `BUDGET_
 ### From git (Phase A — current)
 
 ```bash
-pip install 'safe-mini @ git+https://github.com/JustinJLeopard/safe-mini.git@v0.1.0'
+pip install 'safe-mini @ git+https://github.com/JustinJLeopard/safe-mini.git@17c8514c1bf42d3064748400745099ca1723e782'
 ```
 
 ### From source (development)
@@ -95,7 +95,15 @@ pip install safe-mini  # not yet published
 
 ## Status
 
-**Current state:** initial scaffolding (`v0.1.0`, alpha). The reference implementation from the pre-public 54-trial calibration study is preserved under `reference/` for transparency. The production package under `safe_mini/` is currently a typed scaffold with the canonical types + AgentRunner Protocol locked in via tests; the SafeMiniRunner concrete implementation is the next port pass.
+**Current source state:** alpha (package metadata `0.1.0`). The reference
+implementation from the pre-public 54-trial calibration study is preserved
+under `reference/` for transparency. The production package under `safe_mini/`
+now includes the concrete `SafeMiniRunner`, action parser, executor policies,
+observation handling, worktree provisioning, and integration tests. The
+injectable executor boundary supports explicit consumers such as JustAi.
+
+This records source integration only. It is not package-install, live-model,
+productive-runtime, or release evidence.
 
 **Empirical baseline** (from the lab study, 6 task families × 9 configs × 54 trials):
 
@@ -111,7 +119,8 @@ The lab study artifacts:
 - `reference/lab_benchmark_tasks.py` — the 6-task corpus
 - `reference/lab_benchmark_safe_mini.py` — the matrix-runner
 
-These will be factored into the production package + the benchmark harness will move to the `local-resident` repo.
+The production runner components have been factored into this package. The
+benchmark harness remains separate work for `local-resident`.
 
 ## Three-repo architecture
 
