@@ -3,13 +3,14 @@
 from __future__ import annotations
 
 import time
+from collections.abc import Callable
 from pathlib import Path
 from typing import Protocol
 
 from .action_parser import ActionParseError, parse_action
 from .classifier import classify_failure
 from .observation import apply_observation_policy, final_tests_pass
-from .policies import ExecutorPolicies
+from .policies import BaseExecutor, ExecutorPolicies
 from .protocol import AgentRunner
 from .types import Budget, Chunk, ExecutorPolicy, FailureClass, ObservationPolicy, RunResult
 from .worktree import WorktreeProvisioner
@@ -22,6 +23,13 @@ class ActionModel(Protocol):
         """Return the next assistant response containing one action."""
 
 
+ExecutorFactory = Callable[[Path, ExecutorPolicy], BaseExecutor]
+
+
+def _default_executor_factory(cwd: Path, policy: ExecutorPolicy) -> BaseExecutor:
+    return ExecutorPolicies[policy](cwd)
+
+
 class SafeMiniRunner(AgentRunner):
     """Concrete runner ported from ``reference/lab_safe_mini_agent.py``."""
 
@@ -32,11 +40,13 @@ class SafeMiniRunner(AgentRunner):
         repo_path: str | Path,
         keep_worktree: bool = False,
         final_check_command: str = "python3 tests/run_tests.py",
+        executor_factory: ExecutorFactory | None = None,
     ) -> None:
         self.model = model
         self.repo_path = Path(repo_path)
         self.keep_worktree = keep_worktree
         self.final_check_command = final_check_command
+        self.executor_factory = executor_factory
 
     def run(
         self,
@@ -55,8 +65,7 @@ class SafeMiniRunner(AgentRunner):
         observation_chars_used = 0
         observation_budget_exhausted = False
 
-        executor_cls = ExecutorPolicies[executor_policy]
-        executor = executor_cls(cwd)
+        executor = (self.executor_factory or _default_executor_factory)(cwd, executor_policy)
 
         try:
             for _ in range(budget.move_budget):
@@ -109,11 +118,11 @@ class SafeMiniRunner(AgentRunner):
 
                 if "COMPLETE_TASK_AND_SUBMIT_FINAL_OUTPUT" in shaped.output:
                     break
-                if final_tests_pass(cwd, command=self.final_check_command):
+                if self._final_check(cwd, executor):
                     success = True
                     break
 
-            tests_pass = final_tests_pass(cwd, command=self.final_check_command)
+            tests_pass = self._final_check(cwd, executor)
             reward_hacking = _reward_hacking_detected(
                 transcript, tests_pass, chunk.success_criteria
             )
@@ -142,6 +151,11 @@ class SafeMiniRunner(AgentRunner):
     def classify_failure(self, result: RunResult) -> FailureClass:
         return classify_failure(result)
 
+    def _final_check(self, cwd: Path, executor: BaseExecutor) -> bool:
+        if self.executor_factory is None:
+            return final_tests_pass(cwd, command=self.final_check_command)
+        return _verification_passed(executor, self.final_check_command)
+
 
 def _initial_prompt(chunk: Chunk) -> str:
     return (
@@ -149,6 +163,12 @@ def _initial_prompt(chunk: Chunk) -> str:
         f"Success criteria: {chunk.success_criteria}\n"
         "Respond with exactly one bash-action fenced block or JSON bash action."
     )
+
+
+def _verification_passed(executor: BaseExecutor, command: str) -> bool:
+    """Run final verification through the same backend that executed actions."""
+    verification = executor.run(command)
+    return verification.returncode == 0 and not verification.blocked
 
 
 def _reward_hacking_detected(
