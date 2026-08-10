@@ -1,7 +1,16 @@
 from pathlib import Path
 
+import safe_mini.runner as runner_module
 import safe_mini.worktree as worktree_module
-from safe_mini import Budget, Chunk, ExecutorPolicy, FailureClass, ObservationPolicy, SafeMiniRunner
+from safe_mini import (
+    Budget,
+    Chunk,
+    ExecutorPolicy,
+    FailureClass,
+    Observation,
+    ObservationPolicy,
+    SafeMiniRunner,
+)
 from tests._fixtures.scripted_model import ScriptedModel
 
 FIXTURE_REPO = Path(__file__).parent / "fixtures" / "practice_repo"
@@ -32,6 +41,70 @@ def test_success_path_completes_without_host_path(monkeypatch):
     assert result.success is True
     assert result.final_tests_pass is True
     assert result.failure_class is None
+
+
+def test_executor_factory_runs_actions_and_final_check_in_same_backend(tmp_path: Path):
+    source = tmp_path / "source"
+    source.mkdir()
+    invocations: list[str] = []
+    factories: list[tuple[Path, ExecutorPolicy]] = []
+
+    class InjectedExecutor:
+        def __init__(self, cwd: Path) -> None:
+            self.cwd = cwd
+            self.blocked_commands = 0
+
+        def run(self, command: str) -> Observation:
+            invocations.append(command)
+            return Observation(command=command, output="", returncode=0)
+
+    def factory(cwd: Path, policy: ExecutorPolicy) -> InjectedExecutor:
+        factories.append((cwd, policy))
+        return InjectedExecutor(cwd)
+
+    result = SafeMiniRunner(
+        ScriptedModel(responses=[ScriptedModel._cmd("echo action")]),
+        repo_path=source,
+        final_check_command="verify",
+        executor_factory=factory,
+    ).run(
+        chunk(),
+        Budget(move_budget=1, observation_budget=4000),
+        ObservationPolicy.FULL,
+        ExecutorPolicy.SAFE,
+    )
+
+    assert result.success is True
+    assert result.final_tests_pass is True
+    assert invocations == ["echo action", "verify", "verify"]
+    assert factories[0][1] == ExecutorPolicy.SAFE
+    assert factories[0][0] != source
+    assert not factories[0][0].exists()
+
+
+def test_default_runner_keeps_legacy_final_check(monkeypatch):
+    final_checks: list[tuple[Path, str]] = []
+
+    def legacy_final_check(cwd: Path, command: str) -> bool:
+        final_checks.append((cwd, command))
+        return True
+
+    monkeypatch.setattr(runner_module, "final_tests_pass", legacy_final_check)
+
+    result = SafeMiniRunner(
+        ScriptedModel(responses=[ScriptedModel._cmd("echo action")]),
+        repo_path=FIXTURE_REPO,
+        final_check_command="verify",
+    ).run(
+        chunk(),
+        Budget(move_budget=1, observation_budget=4000),
+        ObservationPolicy.FULL,
+        ExecutorPolicy.SAFE,
+    )
+
+    assert result.success is True
+    assert [command for _, command in final_checks] == ["verify", "verify"]
+    assert all(cwd != FIXTURE_REPO for cwd, _ in final_checks)
 
 
 def test_greeting_task_replays_in_fresh_worktrees_without_changing_source(
