@@ -43,8 +43,7 @@ def test_greeting_task_replays_in_fresh_worktrees_without_changing_source(
     tests = source / "tests"
     tests.mkdir(parents=True)
     (tests / "run_tests.py").write_text(
-        "from greeting import greet\n\n"
-        "assert greet('Justin') == 'Hello, Justin!'\n"
+        "from greeting import greet\n\nassert greet('Justin') == 'Hello, Justin!'\n"
     )
 
     monkeypatch.setattr(worktree_module.tempfile, "tempdir", str(tmp_path))
