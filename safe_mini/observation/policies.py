@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import json
-import os
 import subprocess
 from pathlib import Path
 
@@ -50,7 +49,7 @@ def final_tests_pass(cwd: str | Path, *, command: str = "python3 tests/run_tests
         shell=True,
         cwd=cwd_path,
         env={
-            "PATH": os.environ.get("PATH") or SANITIZED_PATH,
+            "PATH": SANITIZED_PATH,
             "PYTHONPATH": str(cwd_path),
             "HOME": str(cwd_path / ".agent-home"),
             "LANG": "C.UTF-8",

@@ -16,7 +16,7 @@ class WorktreeProvisioner:
     def __init__(self, base_repo: str | Path, *, tmp_root: str | Path | None = None) -> None:
         self.base_repo = Path(base_repo).resolve()
         self.tmp_root = Path(tmp_root).resolve() if tmp_root else None
-        self._tempdir: tempfile.TemporaryDirectory[str] | None = None
+        self._tempdir: Path | None = None
         self.path: Path | None = None
 
     def provision(self) -> Path:
@@ -24,14 +24,18 @@ class WorktreeProvisioner:
             raise FileNotFoundError(f"base repo does not exist: {self.base_repo}")
 
         self.cleanup()
-        self._tempdir = tempfile.TemporaryDirectory(prefix="safe-mini-", dir=self.tmp_root)
-        target = Path(self._tempdir.name) / "repo"
-        ignore = shutil.ignore_patterns(".git", "__pycache__", ".pytest_cache", ".mypy_cache")
-        shutil.copytree(self.base_repo, target, ignore=ignore)
-        home = target / ".agent-home"
-        home.mkdir(mode=0o700, exist_ok=True)
-        self.path = target
-        return target
+        self._tempdir = Path(tempfile.mkdtemp(prefix="safe-mini-", dir=self.tmp_root))
+        try:
+            target = self._tempdir / "repo"
+            ignore = shutil.ignore_patterns(".git", "__pycache__", ".pytest_cache", ".mypy_cache")
+            shutil.copytree(self.base_repo, target, ignore=ignore)
+            home = target / ".agent-home"
+            home.mkdir(mode=0o700, exist_ok=True)
+            self.path = target
+            return target
+        except Exception:
+            self.cleanup()
+            raise
 
     def env_for(self, cwd: Path) -> dict[str, str]:
         return {
@@ -43,7 +47,8 @@ class WorktreeProvisioner:
 
     def cleanup(self) -> None:
         if self._tempdir is not None:
-            self._tempdir.cleanup()
+            if self._tempdir.exists():
+                shutil.rmtree(self._tempdir)
             self._tempdir = None
         self.path = None
 
